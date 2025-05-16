@@ -1,0 +1,47 @@
+package zzpj_rent.reservation.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "reservations")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Reservation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // Mieszkanie
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "property_id", nullable = false)
+    private Property property;
+
+    // Najemca
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private User tenant;
+
+    private LocalDate startDate;
+    private LocalDate endDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.PENDING;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    public enum Status {
+        PENDING,
+        CONFIRMED,
+        CANCELLED,
+        REJECTED
+    }
+}
+
