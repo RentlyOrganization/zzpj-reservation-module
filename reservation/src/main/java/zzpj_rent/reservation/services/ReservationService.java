@@ -34,6 +34,10 @@ public class ReservationService {
             throw new RuntimeException("Property is not available for the selected dates");
         }
 
+        if (tenant.equals(property.getOwner())) {
+            throw new RuntimeException("Owner cannot reserve their own property");
+        }
+
         Reservation reservation = Reservation.builder()
                 .property(property)
                 .tenant(tenant)
