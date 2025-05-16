@@ -1,5 +1,7 @@
 package zzpj_rent.reservation.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -20,9 +22,11 @@ public class User {
 
     // Relacje
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Property> properties;
 
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Reservation> reservations;
 
 }

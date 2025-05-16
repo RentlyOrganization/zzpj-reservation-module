@@ -1,5 +1,6 @@
 package zzpj_rent.reservation.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -25,6 +26,7 @@ public class Reservation {
     // Najemca
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
+    @JsonIgnore
     private User tenant;
 
     private LocalDate startDate;
@@ -41,7 +43,8 @@ public class Reservation {
         PENDING,
         CONFIRMED,
         CANCELLED,
-        REJECTED
+        REJECTED,
+        FINISHED
     }
 }
 

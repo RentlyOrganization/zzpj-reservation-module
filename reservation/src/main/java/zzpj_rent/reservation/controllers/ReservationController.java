@@ -2,13 +2,13 @@ package zzpj_rent.reservation.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
+import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.services.ReservationService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/rent")
@@ -24,4 +24,16 @@ public class ReservationController {
     public ResponseEntity<Reservation> reserve(@RequestBody ReservationRequest request) {
         return ResponseEntity.ok(reservationService.createReservation(request));
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<ReservationResponse>> getAllReservationsForTenant(@RequestParam Long tenantId,
+                                                                                 @RequestParam(required = false) Reservation.Status status) {
+
+        List<ReservationResponse> reservations = (status == null)
+                ? reservationService.getAllReservationsForTenant(tenantId)
+                : reservationService.getReservationsForTenantByStatus(tenantId, status);
+
+        return ResponseEntity.ok(reservations);
+    }
+
 }

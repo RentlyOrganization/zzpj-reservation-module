@@ -1,5 +1,7 @@
 package zzpj_rent.reservation.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -22,6 +24,7 @@ public class Property {
     // Relacja do właściciela
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
+    @JsonIgnore
     private User owner;
 
     private String address;
@@ -29,6 +32,7 @@ public class Property {
 
     // Rezerwacje
     @OneToMany(mappedBy = "property", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Reservation> reservations;
 }
 

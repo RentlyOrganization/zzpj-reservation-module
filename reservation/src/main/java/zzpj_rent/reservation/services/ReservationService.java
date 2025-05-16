@@ -3,6 +3,7 @@ package zzpj_rent.reservation.services;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
+import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.exceptions.BadRequestException;
 import zzpj_rent.reservation.exceptions.ForbiddenException;
 import zzpj_rent.reservation.exceptions.NotFoundException;
@@ -14,6 +15,8 @@ import zzpj_rent.reservation.repository.ReservationRepository;
 import zzpj_rent.reservation.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -52,4 +55,31 @@ public class ReservationService {
 
         return reservationRepository.save(reservation);
     }
+
+    public List<ReservationResponse> getAllReservationsForTenant(Long id) {
+        return reservationRepository.findByTenantId(id).stream().map(res ->
+                ReservationResponse.builder()
+                        .id(res.getId())
+                        .tenantId(res.getTenant().getId())
+                        .tenantName(res.getTenant().getFullName())
+                        .propertyId(res.getProperty().getId())
+                        .status(res.getStatus().name())
+                        .startDate(res.getStartDate())
+                        .endDate(res.getEndDate())
+                        .build()).collect(Collectors.toList());
+    }
+
+    public List<ReservationResponse> getReservationsForTenantByStatus(Long id, Reservation.Status status) {
+        return reservationRepository.findByStatusAndTenantId(status, id).stream().map(res ->
+                ReservationResponse.builder()
+                        .id(res.getId())
+                        .tenantId(res.getTenant().getId())
+                        .tenantName(res.getTenant().getFullName())
+                        .propertyId(res.getProperty().getId())
+                        .status(res.getStatus().name())
+                        .startDate(res.getStartDate())
+                        .endDate(res.getEndDate())
+                        .build()).collect(Collectors.toList());
+    }
+
 }
