@@ -3,6 +3,9 @@ package zzpj_rent.reservation.services;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
+import zzpj_rent.reservation.exceptions.BadRequestException;
+import zzpj_rent.reservation.exceptions.ForbiddenException;
+import zzpj_rent.reservation.exceptions.NotFoundException;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
@@ -21,21 +24,21 @@ public class ReservationService {
 
     public Reservation createReservation(ReservationRequest request) {
         Property property = propertyRepository.findById(request.getPropertyId())
-                .orElseThrow(() -> new RuntimeException("Property not found"));
+                .orElseThrow(() -> new NotFoundException("Property not found"));
 
         User tenant = userRepository.findById(request.getTenantId())
-                .orElseThrow(() -> new RuntimeException("Tenant not found"));
+                .orElseThrow(() -> new NotFoundException("Tenant not found"));
 
         boolean isAvailable = reservationRepository
                 .findByPropertyIdAndDateRangeOverlap(property.getId(), request.getStartDate(), request.getEndDate())
                 .isEmpty();
 
         if (!isAvailable) {
-            throw new RuntimeException("Property is not available for the selected dates");
+            throw new BadRequestException("Property is not available for the selected dates");
         }
 
         if (tenant.equals(property.getOwner())) {
-            throw new RuntimeException("Owner cannot reserve their own property");
+            throw new ForbiddenException("Owner cannot reserve their own property");
         }
 
         Reservation reservation = Reservation.builder()
