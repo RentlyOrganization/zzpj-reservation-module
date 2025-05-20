@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
+import zzpj_rent.reservation.dtos.response.SuccessMessage;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.services.ReservationService;
 
@@ -34,6 +35,12 @@ public class ReservationController {
                 : reservationService.getReservationsForTenantByStatus(tenantId, status);
 
         return ResponseEntity.ok(reservations);
+    }
+
+    @PatchMapping("/status/{id}")
+    public ResponseEntity<SuccessMessage> updateReservationStatus(@PathVariable Long id,
+                                                                  @RequestParam Reservation.Status status) {
+        return ResponseEntity.ok(new SuccessMessage(reservationService.updateReservationStatus(id, status)));
     }
 
 }

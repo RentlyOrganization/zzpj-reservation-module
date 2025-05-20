@@ -13,8 +13,10 @@ import zzpj_rent.reservation.model.User;
 import zzpj_rent.reservation.repository.PropertyRepository;
 import zzpj_rent.reservation.repository.ReservationRepository;
 import zzpj_rent.reservation.repository.UserRepository;
+import java.time.format.DateTimeParseException;
 
 import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,34 +28,51 @@ public class ReservationService {
     private final UserRepository userRepository;
 
     public Reservation createReservation(ReservationRequest request) {
-        Property property = propertyRepository.findById(request.getPropertyId())
-                .orElseThrow(() -> new NotFoundException("Property not found"));
+        try {
+            if (request.getStartDate() == null || request.getEndDate() == null) {
+                throw new BadRequestException("Start date and end date are required");
+            } else if (request.getStartDate().isAfter(request.getEndDate())) {
+                throw new BadRequestException("Start date cannot be after end date");
+            } else if (request.getStartDate().isBefore(ChronoLocalDate.from(LocalDateTime.now()))) {
+                throw new BadRequestException("Start date or end date cannot be in the past");
+            } else if (request.getStartDate().isEqual(request.getEndDate())) {
+                throw new BadRequestException("Start date and end date cannot be the same");
+            }
 
-        User tenant = userRepository.findById(request.getTenantId())
-                .orElseThrow(() -> new NotFoundException("Tenant not found"));
+            Property property = propertyRepository.findById(request.getPropertyId())
+                    .orElseThrow(() -> new NotFoundException("Property not found"));
 
-        boolean isAvailable = reservationRepository
-                .findByPropertyIdAndDateRangeOverlap(property.getId(), request.getStartDate(), request.getEndDate())
-                .isEmpty();
+            User tenant = userRepository.findById(request.getTenantId())
+                    .orElseThrow(() -> new NotFoundException("Tenant not found"));
 
-        if (!isAvailable) {
-            throw new BadRequestException("Property is not available for the selected dates");
+            boolean isAvailable = reservationRepository
+                    .findByPropertyIdAndDateRangeOverlap(property.getId(), request.getStartDate(), request.getEndDate())
+                    .isEmpty();
+
+            if (!isAvailable) {
+                throw new BadRequestException("Property is not available for the selected dates");
+            }
+
+            if (tenant.equals(property.getOwner())) {
+                throw new ForbiddenException("Owner cannot reserve their own property");
+            }
+
+            Reservation reservation = Reservation.builder()
+                    .property(property)
+                    .tenant(tenant)
+                    .startDate(request.getStartDate())
+                    .endDate(request.getEndDate())
+                    .status(Reservation.Status.PENDING)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            return reservationRepository.save(reservation);
+        } catch (DateTimeParseException e) {
+            throw new BadRequestException("Invalid date format");
+        } catch (Exception e) {
+            throw new BadRequestException("An error occurred while creating the reservation");
+
         }
-
-        if (tenant.equals(property.getOwner())) {
-            throw new ForbiddenException("Owner cannot reserve their own property");
-        }
-
-        Reservation reservation = Reservation.builder()
-                .property(property)
-                .tenant(tenant)
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .status(Reservation.Status.PENDING)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        return reservationRepository.save(reservation);
     }
 
     public List<ReservationResponse> getAllReservationsForTenant(Long id) {
@@ -80,6 +99,47 @@ public class ReservationService {
                         .startDate(res.getStartDate())
                         .endDate(res.getEndDate())
                         .build()).collect(Collectors.toList());
+    }
+
+    public String updateReservationStatus(Long id, Reservation.Status status) {
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+
+        switch (status) {
+            case CONFIRMED -> {
+                if (reservation.getStatus() != Reservation.Status.PENDING) {
+                    throw new BadRequestException("Reservation can only be accepted if it is pending");
+                } else {
+                    reservation.setStatus(Reservation.Status.CONFIRMED);
+                }
+            }
+            case REJECTED -> {
+                if (reservation.getStatus() != Reservation.Status.PENDING) {
+                    throw new BadRequestException("Reservation can only be rejected if it is pending");
+                } else {
+                    reservation.setStatus(Reservation.Status.REJECTED);
+                }
+            }
+            case FINISHED -> {
+                if (reservation.getStatus() != Reservation.Status.CONFIRMED) {
+                    throw new BadRequestException("Reservation can only be finished if it is accepted");
+                } else {
+                    reservation.setStatus(Reservation.Status.FINISHED);
+                }
+            }
+            case CANCELLED -> {
+                if (reservation.getStatus() == Reservation.Status.CONFIRMED) {
+                    reservation.setStatus(Reservation.Status.CANCELLED);
+                } else {
+                    throw new BadRequestException("Reservation can only be cancelled if it is accepted");
+                }
+            }
+            default ->
+                throw new BadRequestException("Invalid reservation status");
+        }
+
+        reservationRepository.save(reservation);
+        return "Reservation status updated to " + reservation.getStatus();
     }
 
 }
