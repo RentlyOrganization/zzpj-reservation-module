@@ -49,4 +49,10 @@ public class ReservationController {
         return ResponseEntity.ok(new SuccessMessage(reservationService.updateReservationStatus(id, status)));
     }
 
+    @DeleteMapping("/delete/{id}/tenant/{tenantId}")
+    public ResponseEntity<SuccessMessage> deleteReservation(@PathVariable Long id,
+                                                            @PathVariable Long tenantId) {
+        return ResponseEntity.ok(new SuccessMessage(reservationService.deleteReservation(id, tenantId)));
+    }
+
 }

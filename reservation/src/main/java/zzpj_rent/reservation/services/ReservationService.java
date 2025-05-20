@@ -157,4 +157,16 @@ public class ReservationService {
         return "Reservation status updated to " + reservation.getStatus();
     }
 
+    public String deleteReservation(Long id, Long tenantId) {
+        Reservation reservation = reservationRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+
+        if (reservation.getStatus() != Reservation.Status.PENDING) {
+            throw new BadRequestException("Cannot delete a processed reservation");
+        }
+
+        reservationRepository.delete(reservation);
+        return "Reservation deleted successfully";
+    }
+
 }
