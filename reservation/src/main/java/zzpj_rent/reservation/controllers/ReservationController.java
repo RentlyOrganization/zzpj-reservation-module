@@ -27,7 +27,7 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.createReservation(request));
     }
 
-    @GetMapping("/reservations/all")
+    @GetMapping("/reservations/tenant/all")
     public ResponseEntity<List<ReservationResponse>> getAllReservationsForTenant(@RequestParam Long tenantId,
                                                                                  @RequestParam(required = false) Reservation.Status status) {
 
@@ -61,6 +61,18 @@ public class ReservationController {
                                                             @PathVariable Long tenantId,
                                                             @RequestBody UpdateReservationRequest request) {
         return ResponseEntity.ok(new SuccessMessage(reservationService.updateReservation(id, tenantId, request)));
+    }
+
+    @GetMapping("/reservations/owner/all")
+    public ResponseEntity<List<ReservationResponse>> getAllReservationsForOwner(@RequestParam Long propertyId,
+                                                                                 @RequestParam Long ownerId) {
+        return ResponseEntity.ok(reservationService.getAllReservationsForOwner(propertyId, ownerId));
+    }
+
+    @GetMapping("/reservations/{id}/owner/{ownerId}")
+    public ResponseEntity<ReservationResponse> getReservationByIdOwner(@PathVariable Long id,
+                                                                  @PathVariable Long ownerId) {
+        return ResponseEntity.ok(reservationService.getReservationByIdOwner(id, ownerId));
     }
 
 }

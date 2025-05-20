@@ -21,4 +21,5 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByTenantId(Long tenantId);
     Optional<Reservation> findByIdAndTenantId(Long id, Long tenantId);
     List<Reservation> findByStatusAndTenantId(Reservation.Status status, Long tenantId);
+    List<Reservation> findByPropertyId(Long propertyId);
 }

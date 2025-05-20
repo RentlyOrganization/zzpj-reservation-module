@@ -89,9 +89,52 @@ public class ReservationService {
                         .build()).collect(Collectors.toList());
     }
 
+    public List<ReservationResponse> getAllReservationsForOwner(Long propertyId, Long ownerId) {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new NotFoundException("Property not found"));
+
+        if (!property.getOwner().getId().equals(ownerId)) {
+            throw new ForbiddenException("You are not the owner of this property");
+        }
+
+        return reservationRepository.findByPropertyId(propertyId).stream().map(res ->
+                        ReservationResponse.builder()
+                        .id(res.getId())
+                        .tenantId(res.getTenant().getId())
+                        .tenantName(res.getTenant().getFullName())
+                        .propertyId(res.getProperty().getId())
+                        .status(res.getStatus().name())
+                        .startDate(res.getStartDate())
+                        .endDate(res.getEndDate())
+                        .build()).collect(Collectors.toList());
+
+    }
+
     public ReservationResponse getReservationByIdTenant(Long id, Long tenantId) {
         Reservation res = reservationRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Reservation not found"));
+
+        return ReservationResponse.builder()
+                .id(res.getId())
+                .tenantId(res.getTenant().getId())
+                .tenantName(res.getTenant().getFullName())
+                .propertyId(res.getProperty().getId())
+                .status(res.getStatus().name())
+                .startDate(res.getStartDate())
+                .endDate(res.getEndDate())
+                .build();
+    }
+
+    public ReservationResponse getReservationByIdOwner(Long id, Long ownerId) {
+        Reservation res = reservationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+
+        Property property = propertyRepository.findById(res.getProperty().getId())
+                .orElseThrow(() -> new NotFoundException("Property not found"));
+
+        if (!property.getOwner().getId().equals(ownerId)) {
+            throw new ForbiddenException("You are not the owner of this property");
+        }
 
         return ReservationResponse.builder()
                 .id(res.getId())
