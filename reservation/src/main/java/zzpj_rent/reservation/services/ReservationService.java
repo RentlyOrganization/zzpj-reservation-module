@@ -88,6 +88,21 @@ public class ReservationService {
                         .build()).collect(Collectors.toList());
     }
 
+    public ReservationResponse getReservationByIdTenant(Long id, Long tenantId) {
+        Reservation res = reservationRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+
+        return ReservationResponse.builder()
+                .id(res.getId())
+                .tenantId(res.getTenant().getId())
+                .tenantName(res.getTenant().getFullName())
+                .propertyId(res.getProperty().getId())
+                .status(res.getStatus().name())
+                .startDate(res.getStartDate())
+                .endDate(res.getEndDate())
+                .build();
+    }
+
     public List<ReservationResponse> getReservationsForTenantByStatus(Long id, Reservation.Status status) {
         return reservationRepository.findByStatusAndTenantId(status, id).stream().map(res ->
                 ReservationResponse.builder()

@@ -26,7 +26,7 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.createReservation(request));
     }
 
-    @GetMapping("/all")
+    @GetMapping("/reservations/all")
     public ResponseEntity<List<ReservationResponse>> getAllReservationsForTenant(@RequestParam Long tenantId,
                                                                                  @RequestParam(required = false) Reservation.Status status) {
 
@@ -35,6 +35,12 @@ public class ReservationController {
                 : reservationService.getReservationsForTenantByStatus(tenantId, status);
 
         return ResponseEntity.ok(reservations);
+    }
+
+    @GetMapping("/reservations/{id}/tenant/{tenantId}")
+    public ResponseEntity<ReservationResponse> getReservationByIdTenant(@PathVariable Long id,
+                                                                  @PathVariable Long tenantId) {
+        return ResponseEntity.ok(reservationService.getReservationByIdTenant(id, tenantId));
     }
 
     @PatchMapping("/status/{id}")

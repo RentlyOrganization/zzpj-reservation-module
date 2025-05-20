@@ -7,6 +7,7 @@ import zzpj_rent.reservation.model.Reservation;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     @Query("SELECT r FROM Reservation r WHERE r.property.id = :propertyId " +
@@ -18,5 +19,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("endDate") LocalDate endDate
     );
     List<Reservation> findByTenantId(Long tenantId);
+    Optional<Reservation> findByIdAndTenantId(Long id, Long tenantId);
     List<Reservation> findByStatusAndTenantId(Reservation.Status status, Long tenantId);
 }
