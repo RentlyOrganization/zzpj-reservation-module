@@ -3,6 +3,7 @@ package zzpj_rent.reservation.services;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
+import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.exceptions.BadRequestException;
 import zzpj_rent.reservation.exceptions.ForbiddenException;
@@ -13,7 +14,8 @@ import zzpj_rent.reservation.model.User;
 import zzpj_rent.reservation.repository.PropertyRepository;
 import zzpj_rent.reservation.repository.ReservationRepository;
 import zzpj_rent.reservation.repository.UserRepository;
-import java.time.format.DateTimeParseException;
+
+import java.time.LocalDate;
 
 import java.time.LocalDateTime;
 import java.time.chrono.ChronoLocalDate;
@@ -33,7 +35,8 @@ public class ReservationService {
                 throw new BadRequestException("Start date and end date are required");
             } else if (request.getStartDate().isAfter(request.getEndDate())) {
                 throw new BadRequestException("Start date cannot be after end date");
-            } else if (request.getStartDate().isBefore(ChronoLocalDate.from(LocalDateTime.now()))) {
+            } else if (request.getStartDate().isBefore(ChronoLocalDate.from(LocalDateTime.now())) ||
+                    request.getEndDate().isBefore(ChronoLocalDate.from(LocalDateTime.now()))) {
                 throw new BadRequestException("Start date or end date cannot be in the past");
             } else if (request.getStartDate().isEqual(request.getEndDate())) {
                 throw new BadRequestException("Start date and end date cannot be the same");
@@ -67,8 +70,6 @@ public class ReservationService {
                     .build();
 
             return reservationRepository.save(reservation);
-        } catch (DateTimeParseException e) {
-            throw new BadRequestException("Invalid date format");
         } catch (Exception e) {
             throw new BadRequestException("An error occurred while creating the reservation");
 
@@ -167,6 +168,54 @@ public class ReservationService {
 
         reservationRepository.delete(reservation);
         return "Reservation deleted successfully";
+    }
+
+    public String updateReservation(Long id, Long tenantId, UpdateReservationRequest request) {
+        Reservation reservation = reservationRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+
+        LocalDate startDate;
+        LocalDate endDate;
+
+        if (request.getStartDate() == null) {
+            startDate = reservation.getStartDate();
+        } else {
+            startDate = request.getStartDate();
+        }
+
+        if (request.getEndDate() == null) {
+            endDate = reservation.getEndDate();
+        } else {
+            endDate = request.getEndDate();
+        }
+
+        if (reservation.getStatus() != Reservation.Status.PENDING) {
+            throw new BadRequestException("Cannot update a processed reservation");
+        }
+
+        boolean isAvailable = reservationRepository
+                .findByPropertyIdAndDateRangeOverlap(reservation.getProperty().getId(), startDate, endDate)
+                .isEmpty();
+
+        if (!isAvailable) {
+            throw new BadRequestException("Property is not available for the selected dates");
+        }
+
+        if (startDate.isAfter(endDate)) {
+            throw new BadRequestException("Start date cannot be after end date");
+        } else if (startDate.isBefore(ChronoLocalDate.from(LocalDateTime.now())) ||
+                endDate.isBefore(ChronoLocalDate.from(LocalDateTime.now()))) {
+            throw new BadRequestException("Start date or end date cannot be in the past");
+        } else if (startDate.isEqual(endDate)) {
+            throw new BadRequestException("Start date and end date cannot be the same");
+        }
+
+        reservation.setStartDate(startDate);
+        reservation.setEndDate(endDate);
+
+        reservationRepository.save(reservation);
+        return "Reservation updated successfully";
+
     }
 
 }

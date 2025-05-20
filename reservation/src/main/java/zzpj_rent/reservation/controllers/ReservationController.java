@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
+import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.dtos.response.SuccessMessage;
 import zzpj_rent.reservation.model.Reservation;
@@ -53,6 +54,13 @@ public class ReservationController {
     public ResponseEntity<SuccessMessage> deleteReservation(@PathVariable Long id,
                                                             @PathVariable Long tenantId) {
         return ResponseEntity.ok(new SuccessMessage(reservationService.deleteReservation(id, tenantId)));
+    }
+
+    @PatchMapping("update/{id}/tenant/{tenantId}")
+    public ResponseEntity<SuccessMessage> updateReservation(@PathVariable Long id,
+                                                            @PathVariable Long tenantId,
+                                                            @RequestBody UpdateReservationRequest request) {
+        return ResponseEntity.ok(new SuccessMessage(reservationService.updateReservation(id, tenantId, request)));
     }
 
 }
