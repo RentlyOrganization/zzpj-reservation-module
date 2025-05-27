@@ -41,7 +41,7 @@ public class ReservationController {
     @GetMapping("/reservations/{id}/tenant/{tenantId}")
     public ResponseEntity<ReservationResponse> getReservationByIdTenant(@PathVariable Long id,
                                                                   @PathVariable Long tenantId) {
-        return ResponseEntity.ok(reservationService.getReservationByIdTenant(id, tenantId));
+        return ResponseEntity.ok(reservationService.getReservationByIdForTenant(id, tenantId));
     }
 
     @PatchMapping("/status/{id}")
@@ -72,7 +72,7 @@ public class ReservationController {
     @GetMapping("/reservations/{id}/owner/{ownerId}")
     public ResponseEntity<ReservationResponse> getReservationByIdOwner(@PathVariable Long id,
                                                                   @PathVariable Long ownerId) {
-        return ResponseEntity.ok(reservationService.getReservationByIdOwner(id, ownerId));
+        return ResponseEntity.ok(reservationService.getReservationByIdForOwner(id, ownerId));
     }
 
 }

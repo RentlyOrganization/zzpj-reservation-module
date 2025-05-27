@@ -20,7 +20,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 21  # Zmienione na LTS (JDK 24 może być niestabilne)
+          java-version: 24  # Zmienione na LTS (JDK 24 może być niestabilne)
           distribution: 'temurin'  # Zalecana dystrybucja
 
       - name: Cache SonarQube packages

@@ -110,7 +110,7 @@ public class ReservationService {
 
     }
 
-    public ReservationResponse getReservationByIdTenant(Long id, Long tenantId) {
+    public ReservationResponse getReservationByIdForTenant(Long id, Long tenantId) {
         Reservation res = reservationRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Reservation not found"));
 
@@ -125,7 +125,7 @@ public class ReservationService {
                 .build();
     }
 
-    public ReservationResponse getReservationByIdOwner(Long id, Long ownerId) {
+    public ReservationResponse getReservationByIdForOwner(Long id, Long ownerId) {
         Reservation res = reservationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Reservation not found"));
 
