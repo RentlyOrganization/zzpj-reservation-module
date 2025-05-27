@@ -44,11 +44,10 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-          mvn -B verify \
-          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=reservation \
-            -Dsonar.projectName='reservation' \
-            -Dsonar.host.url=$SONAR_HOST_URL \
-            -Dsonar.login=$SONAR_TOKEN \
-            -Dsonar.scm.provider=git \
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar `
+            -Dsonar.projectKey=reservation `
+            -Dsonar.projectName="reservation" `
+            -Dsonar.host.url=$env:SONAR_HOST_URL `
+            -Dsonar.login=$env:SONAR_TOKEN `
+            -Dsonar.scm.provider=git `
             -Dsonar.sourceEncoding=UTF-8
