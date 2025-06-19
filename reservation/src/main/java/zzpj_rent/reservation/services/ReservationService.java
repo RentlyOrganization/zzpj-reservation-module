@@ -1,13 +1,12 @@
 package zzpj_rent.reservation.services;
 
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
 import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
-import zzpj_rent.reservation.exceptions.BadRequestException;
-import zzpj_rent.reservation.exceptions.ForbiddenException;
-import zzpj_rent.reservation.exceptions.NotFoundException;
+import zzpj_rent.reservation.exceptions.*;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
@@ -32,32 +31,32 @@ public class ReservationService {
     public Reservation createReservation(ReservationRequest request) {
         try {
             if (request.getStartDate() == null || request.getEndDate() == null) {
-                throw new BadRequestException("Start date and end date are required");
+                throw new InvalidDateRangeException("Sart date and end date are required");
             } else if (request.getStartDate().isAfter(request.getEndDate())) {
-                throw new BadRequestException("Start date cannot be after end date");
+                throw new InvalidDateRangeException("Sart date cannot be after end date");
             } else if (request.getStartDate().isBefore(ChronoLocalDate.from(LocalDateTime.now())) ||
                     request.getEndDate().isBefore(ChronoLocalDate.from(LocalDateTime.now()))) {
-                throw new BadRequestException("Start date or end date cannot be in the past");
+                throw new InvalidDateRangeException("Start date or end date cannot be in the past");
             } else if (request.getStartDate().isEqual(request.getEndDate())) {
-                throw new BadRequestException("Start date and end date cannot be the same");
+                throw new InvalidDateRangeException("Start date and end date cannot be the same");
             }
 
             Property property = propertyRepository.findById(request.getPropertyId())
-                    .orElseThrow(() -> new NotFoundException("Property not found"));
+                    .orElseThrow(NoPropertyException::new);
 
             User tenant = userRepository.findById(request.getTenantId())
-                    .orElseThrow(() -> new NotFoundException("Tenant not found"));
+                    .orElseThrow(NoTenantException::new);
 
             boolean isAvailable = reservationRepository
                     .findByPropertyIdAndDateRangeOverlap(property.getId(), request.getStartDate(), request.getEndDate())
                     .isEmpty();
 
             if (!isAvailable) {
-                throw new BadRequestException("Property is not available for the selected dates");
+                throw new InvalidDateRangeException("Property is not available for the selected dates");
             }
 
             if (tenant.equals(property.getOwner())) {
-                throw new ForbiddenException("Owner cannot reserve their own property");
+                throw new OwnerException("\"Owner cannot reserve their own property\"");
             }
 
             Reservation reservation = Reservation.builder()
@@ -70,9 +69,9 @@ public class ReservationService {
                     .build();
 
             return reservationRepository.save(reservation);
-        } catch (Exception e) {
-            throw new BadRequestException("An error occurred while creating the reservation");
-
+        } catch (DataAccessException | NullPointerException e) {
+            System.out.println("Error creating reservation: " + e.getMessage());
+            throw new NotSpecifiedException("An error occurred while creating the reservation");
         }
     }
 
@@ -91,10 +90,10 @@ public class ReservationService {
 
     public List<ReservationResponse> getAllReservationsForOwner(Long propertyId, Long ownerId) {
         Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new NotFoundException("Property not found"));
+                .orElseThrow(NoPropertyException::new);
 
         if (!property.getOwner().getId().equals(ownerId)) {
-            throw new ForbiddenException("You are not the owner of this property");
+            throw new OwnerException("You are not the owner of this property");
         }
 
         return reservationRepository.findByPropertyId(propertyId).stream().map(res ->
@@ -112,7 +111,7 @@ public class ReservationService {
 
     public ReservationResponse getReservationByIdForTenant(Long id, Long tenantId) {
         Reservation res = reservationRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+                .orElseThrow(NoReservationException::new);
 
         return ReservationResponse.builder()
                 .id(res.getId())
@@ -127,13 +126,13 @@ public class ReservationService {
 
     public ReservationResponse getReservationByIdForOwner(Long id, Long ownerId) {
         Reservation res = reservationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+                .orElseThrow(NoPropertyException::new);
 
         Property property = propertyRepository.findById(res.getProperty().getId())
-                .orElseThrow(() -> new NotFoundException("Property not found"));
+                .orElseThrow(NoPropertyException::new);
 
         if (!property.getOwner().getId().equals(ownerId)) {
-            throw new ForbiddenException("You are not the owner of this property");
+            throw new OwnerException("You are not the owner of this property");
         }
 
         return ReservationResponse.builder()
@@ -162,26 +161,26 @@ public class ReservationService {
 
     public String updateReservationStatus(Long id, Reservation.Status status) {
         Reservation reservation = reservationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+                .orElseThrow(NoReservationException::new);
 
         switch (status) {
             case CONFIRMED -> {
                 if (reservation.getStatus() != Reservation.Status.PENDING) {
-                    throw new BadRequestException("Reservation can only be accepted if it is pending");
+                    throw new ReservationStatusException("Reservation can only be accepted if it is pending");
                 } else {
                     reservation.setStatus(Reservation.Status.CONFIRMED);
                 }
             }
             case REJECTED -> {
                 if (reservation.getStatus() != Reservation.Status.PENDING) {
-                    throw new BadRequestException("Reservation can only be rejected if it is pending");
+                    throw new ReservationStatusException("Reservation can only be rejected if it is pending");
                 } else {
                     reservation.setStatus(Reservation.Status.REJECTED);
                 }
             }
             case FINISHED -> {
                 if (reservation.getStatus() != Reservation.Status.CONFIRMED) {
-                    throw new BadRequestException("Reservation can only be finished if it is accepted");
+                    throw new ReservationStatusException("Reservation can only be finished if it is accepted");
                 } else {
                     reservation.setStatus(Reservation.Status.FINISHED);
                 }
@@ -190,11 +189,11 @@ public class ReservationService {
                 if (reservation.getStatus() == Reservation.Status.CONFIRMED) {
                     reservation.setStatus(Reservation.Status.CANCELLED);
                 } else {
-                    throw new BadRequestException("Reservation can only be cancelled if it is accepted");
+                    throw new ReservationStatusException("Reservation can only be cancelled if it is accepted");
                 }
             }
             default ->
-                throw new BadRequestException("Invalid reservation status");
+                    throw new ReservationStatusException("Invalid reservation status");
         }
 
         reservationRepository.save(reservation);
@@ -203,10 +202,10 @@ public class ReservationService {
 
     public String deleteReservation(Long id, Long tenantId) {
         Reservation reservation = reservationRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+                .orElseThrow(NoReservationException::new);
 
         if (reservation.getStatus() != Reservation.Status.PENDING) {
-            throw new BadRequestException("Cannot delete a processed reservation");
+            throw new ReservationStatusException("Cannot delete a processed reservation");
         }
 
         reservationRepository.delete(reservation);
@@ -215,7 +214,7 @@ public class ReservationService {
 
     public String updateReservation(Long id, Long tenantId, UpdateReservationRequest request) {
         Reservation reservation = reservationRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new NotFoundException("Reservation not found"));
+                .orElseThrow(NoReservationException::new);
 
         LocalDate startDate;
         LocalDate endDate;
@@ -233,7 +232,7 @@ public class ReservationService {
         }
 
         if (reservation.getStatus() != Reservation.Status.PENDING) {
-            throw new BadRequestException("Cannot update a processed reservation");
+            throw new ReservationStatusException("Cannot update a processed reservation");
         }
 
         boolean isAvailable = reservationRepository
@@ -241,16 +240,16 @@ public class ReservationService {
                 .isEmpty();
 
         if (!isAvailable) {
-            throw new BadRequestException("Property is not available for the selected dates");
+            throw new InvalidDateRangeException("Property is not available for the selected dates");
         }
 
         if (startDate.isAfter(endDate)) {
-            throw new BadRequestException("Start date cannot be after end date");
+            throw new InvalidDateRangeException("Start date cannot be after end date");
         } else if (startDate.isBefore(ChronoLocalDate.from(LocalDateTime.now())) ||
                 endDate.isBefore(ChronoLocalDate.from(LocalDateTime.now()))) {
-            throw new BadRequestException("Start date or end date cannot be in the past");
+            throw new InvalidDateRangeException("Start date or end date cannot be in the past");
         } else if (startDate.isEqual(endDate)) {
-            throw new BadRequestException("Start date and end date cannot be the same");
+            throw new InvalidDateRangeException("Start date and end date cannot be the same");
         }
 
         reservation.setStartDate(startDate);

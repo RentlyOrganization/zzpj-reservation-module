@@ -7,29 +7,20 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import zzpj_rent.reservation.dtos.response.ErrorMessage;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 @RestControllerAdvice
 public class ExceptionsHandler {
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ErrorMessage> handleNotFoundRequest(NotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorMessage(ex.getMessage()));
-    }
 
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ErrorMessage> handleForbidden(ForbiddenException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorMessage(ex.getMessage()));
-    }
+    @ExceptionHandler(ReservationException.class)
+    public ResponseEntity<Map<String, Object>> handleReservationException(ReservationException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", ex.getStatus().value());
+        body.put("error", ex.getStatus().getReasonPhrase());
+        body.put("message", ex.getMessage());
+        body.put("timestamp", ex.getTimestamp().toString());
 
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ErrorMessage> handleBadRequest(BadRequestException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorMessage(ex.getMessage()));
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorMessage> handleGeneric(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorMessage("Unexpected error: " + ex.getMessage()));
+        return new ResponseEntity<>(body, ex.getStatus());
     }
 }
