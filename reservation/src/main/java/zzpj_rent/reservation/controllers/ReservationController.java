@@ -14,7 +14,6 @@ import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
 import zzpj_rent.reservation.dtos.response.ErrorMessage;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.dtos.response.SuccessMessage;
-import zzpj_rent.reservation.exceptions.NotSpecifiedException;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.services.ReservationService;
 
