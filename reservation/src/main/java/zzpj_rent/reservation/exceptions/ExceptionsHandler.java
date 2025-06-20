@@ -14,13 +14,12 @@ import java.util.Map;
 public class ExceptionsHandler {
 
     @ExceptionHandler(ReservationException.class)
-    public ResponseEntity<Map<String, Object>> handleReservationException(ReservationException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("status", ex.getStatus().value());
-        body.put("error", ex.getStatus().getReasonPhrase());
-        body.put("message", ex.getMessage());
-        body.put("timestamp", ex.getTimestamp().toString());
-
-        return new ResponseEntity<>(body, ex.getStatus());
+    public ResponseEntity<ErrorMessage> handleReservationException(ReservationException ex) {
+        ErrorMessage errorResponse = new ErrorMessage(
+                ex.getStatus(),
+                ex.getMessage(),
+                ex.getTimestamp()
+        );
+        return new ResponseEntity<>(errorResponse, ex.getStatus());
     }
 }

@@ -16,6 +16,7 @@ public class ReservationResponse {
     private Long propertyId;
     private Long tenantId;
     private String tenantName;
+    private String tenantSurname;
     private LocalDate startDate;
     private LocalDate endDate;
     private String status;
