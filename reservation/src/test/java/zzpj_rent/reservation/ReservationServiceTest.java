@@ -46,8 +46,8 @@ class ReservationServiceTest {
         // given
         Long propertyId = 1L;
         Long tenantId = 2L;
-        LocalDate startDate = LocalDate.of(2025, 6, 1);
-        LocalDate endDate = LocalDate.of(2025, 6, 5);
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(5);
 
         Property property = Property.builder().id(propertyId).build();
         User tenant = User.builder().id(tenantId).build();
@@ -97,8 +97,8 @@ class ReservationServiceTest {
         // given
         Long propertyId = 1L;
         Long tenantId = 2L;
-        LocalDate startDate = LocalDate.of(2025, 6, 1);
-        LocalDate endDate = LocalDate.of(2025, 6, 5);
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        LocalDate endDate = LocalDate.now().plusDays(5);
 
         Property property = Property.builder().id(propertyId).build();
         User tenant = User.builder().id(tenantId).build();
@@ -110,8 +110,8 @@ class ReservationServiceTest {
         request.setEndDate(endDate);
 
         Reservation conflictingReservation = Reservation.builder().id(20L)
-                .startDate(LocalDate.of(2025, 6, 2))
-                .endDate(LocalDate.of(2025, 6, 5)).build();
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(5)).build();
 
         given(propertyRepository.findById(propertyId)).willReturn(Optional.of(property));
         given(userRepository.findById(tenantId)).willReturn(Optional.of(tenant));
@@ -145,8 +145,8 @@ class ReservationServiceTest {
         ReservationRequest request = new ReservationRequest(
                 propertyId,
                 ownerId,  // <- próbuje jako najemca
-                LocalDate.of(2025, 6, 1),
-                LocalDate.of(2025, 6, 5)
+                LocalDate.now(),
+                LocalDate.now().plusDays(5)
         );
 
         given(propertyRepository.findById(propertyId)).willReturn(Optional.of(property));

@@ -27,6 +27,9 @@
 		<url/>
 	</scm>
 	<properties>
+		<sonar.host.url>http://localhost:9000</sonar.host.url>
+		<sonar.login>sqp_38331e8cffd287cc79256f400dbe022c92f25bb5</sonar.login>
+		<sonar.projectKey>zzpj-reservation-module</sonar.projectKey>
 		<java.version>24</java.version>
 	</properties>
 	<dependencies>

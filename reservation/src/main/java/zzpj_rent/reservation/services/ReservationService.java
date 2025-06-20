@@ -70,7 +70,6 @@ public class ReservationService {
 
             return reservationRepository.save(reservation);
         } catch (DataAccessException | NullPointerException e) {
-            System.out.println("Error creating reservation: " + e.getMessage());
             throw new NotSpecifiedException("An error occurred while creating the reservation");
         }
     }

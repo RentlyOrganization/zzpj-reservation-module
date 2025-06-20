@@ -15,6 +15,16 @@ services:
     volumes:
       - rently_postgres_data:/var/lib/postgresql/data
 
+  sonar-db:
+    image: postgres:15
+    container_name: sonar-db
+    environment:
+      POSTGRES_DB: sonarqube
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - sonar_postgres_data:/var/lib/postgresql/data
+
   rently-pgadmin:
     image: dpage/pgadmin4:latest
     container_name: rently-pgadmin
@@ -25,6 +35,20 @@ services:
       - "5050:80"
     depends_on:
       - rently-db
+      - sonar-db
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/sonarqube
+      SONAR_JDBC_USERNAME: user
+      SONAR_JDBC_PASSWORD: password
+    depends_on:
+      - sonar-db
 
 volumes:
   rently_postgres_data:
+  sonar_postgres_data:
