@@ -3,10 +3,12 @@ package zzpj_rent.reservation.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Entity
-@Table(name = "properties")
+@Table(name = "apartment")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,19 +18,8 @@ public class Property {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    // Relacja do właściciela
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
-    @JsonIgnore
-    private User owner;
-
-    private String address;
-    private String city;
-
-    // Rezerwacje
-    @OneToMany(mappedBy = "property", cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<Reservation> reservations;
+    private BigDecimal price;
+    private String rentalType;
+    private Long ownerId;
 }
 

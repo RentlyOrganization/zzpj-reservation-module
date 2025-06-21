@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
+import java.util.Set;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users_entity")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,15 +17,9 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String fullName;
-
-    // Relacje
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<Property> properties;
-
-    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<Reservation> reservations;
+    private String username;
+    private String email;
+    private String firstName;
+    private String lastName;
 
 }

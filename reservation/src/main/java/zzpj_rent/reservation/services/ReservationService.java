@@ -1,10 +1,13 @@
 package zzpj_rent.reservation.services;
 
+import feign.FeignException;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import zzpj_rent.reservation.dtos.request.ApartmentDTO;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
 import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
+import zzpj_rent.reservation.dtos.request.UserDTO;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.exceptions.*;
 import zzpj_rent.reservation.microservices.ApartmentClient;
@@ -12,9 +15,7 @@ import zzpj_rent.reservation.microservices.UserClient;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
-import zzpj_rent.reservation.repository.PropertyRepository;
 import zzpj_rent.reservation.repository.ReservationRepository;
-import zzpj_rent.reservation.repository.UserRepository;
 
 import java.time.LocalDate;
 
@@ -27,8 +28,6 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ReservationService {
     private final ReservationRepository reservationRepository;
-    private final PropertyRepository propertyRepository;
-    private final UserRepository userRepository;
     private final ApartmentClient apartmentClient;
     private final UserClient userClient;
 
@@ -37,7 +36,7 @@ public class ReservationService {
             if (request.getStartDate() == null || request.getEndDate() == null) {
                 throw new InvalidDateRangeException("Sart date and end date are required");
             } else if (request.getStartDate().isAfter(request.getEndDate())) {
-                throw new InvalidDateRangeException("Sart date cannot be after end date");
+                throw new InvalidDateRangeException("Start date cannot be after end date");
             } else if (request.getStartDate().isBefore(ChronoLocalDate.from(LocalDateTime.now())) ||
                     request.getEndDate().isBefore(ChronoLocalDate.from(LocalDateTime.now()))) {
                 throw new InvalidDateRangeException("Start date or end date cannot be in the past");
@@ -45,11 +44,26 @@ public class ReservationService {
                 throw new InvalidDateRangeException("Start date and end date cannot be the same");
             }
 
-            Property property = propertyRepository.findById(request.getPropertyId())
-                    .orElseThrow(NoPropertyException::new);
+            ApartmentDTO apartmentDto;
+            try {
+                apartmentDto = apartmentClient.getApartmentById(request.getPropertyId());
+                System.out.println("Apartment DTO: " + apartmentDto);
+            } catch (FeignException.NotFound e) {
+                throw new NoPropertyException();
+            }
+            Property property = new Property(apartmentDto.getId(), apartmentDto.getPrice(), apartmentDto.getRentalType(),
+                    apartmentDto.getOwnerId());
 
-            User tenant = userRepository.findById(request.getTenantId())
-                    .orElseThrow(NoTenantException::new);
+            UserDTO userDto;
+            try {
+                userDto = userClient.getUserById(request.getTenantId());
+                System.out.println("User DTO: " + userDto);
+            } catch (FeignException.NotFound e) {
+                throw new NoTenantException();
+            }
+
+            User tenant = new User(userDto.getId(), userDto.getUsername(), userDto.getEmail(),
+                    userDto.getFirstName(), userDto.getLastName());
 
             boolean isAvailable = reservationRepository
                     .findByPropertyIdAndDateRangeOverlap(property.getId(), request.getStartDate(), request.getEndDate())
@@ -59,8 +73,8 @@ public class ReservationService {
                 throw new InvalidDateRangeException("Property is not available for the selected dates");
             }
 
-            if (tenant.equals(property.getOwner())) {
-                throw new OwnerException("\"Owner cannot reserve their own property\"");
+            if (tenant.getId().equals(property.getOwnerId())) {
+                throw new OwnerException("Owner cannot reserve their own property");
             }
 
             Reservation reservation = Reservation.builder()
@@ -80,13 +94,12 @@ public class ReservationService {
 
     //TODO NAPISAC TESTY DO TEGO
     public List<ReservationResponse> getAllReservationsForTenant(Long id) {
-        System.out.println(apartmentClient.getApartmentById(1L));
-        System.out.println(userClient.getUserById(1L));
         return reservationRepository.findByTenantId(id).stream().map(res ->
                 ReservationResponse.builder()
                         .id(res.getId())
                         .tenantId(res.getTenant().getId())
-                        .tenantName(res.getTenant().getFullName())
+                        .tenantName(res.getTenant().getFirstName())
+                        .tenantSurname(res.getTenant().getLastName())
                         .propertyId(res.getProperty().getId())
                         .status(res.getStatus().name())
                         .startDate(res.getStartDate())
@@ -95,10 +108,17 @@ public class ReservationService {
     }
 
     public List<ReservationResponse> getAllReservationsForOwner(Long propertyId, Long ownerId) {
-        Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(NoPropertyException::new);
+        ApartmentDTO apartmentDto;
+        try {
+            apartmentDto = apartmentClient.getApartmentById(propertyId);
+            System.out.println("Apartment DTO: " + apartmentDto);
+        } catch (FeignException.NotFound e) {
+            throw new NoPropertyException();
+        }
+        Property property = new Property(apartmentDto.getId(), apartmentDto.getPrice(), apartmentDto.getRentalType(),
+                apartmentDto.getOwnerId());
 
-        if (!property.getOwner().getId().equals(ownerId)) {
+        if (!property.getOwnerId().equals(ownerId)) {
             throw new OwnerException("You are not the owner of this property");
         }
 
@@ -106,7 +126,8 @@ public class ReservationService {
                         ReservationResponse.builder()
                         .id(res.getId())
                         .tenantId(res.getTenant().getId())
-                        .tenantName(res.getTenant().getFullName())
+                        .tenantName(res.getTenant().getFirstName())
+                        .tenantSurname(res.getTenant().getLastName())
                         .propertyId(res.getProperty().getId())
                         .status(res.getStatus().name())
                         .startDate(res.getStartDate())
@@ -122,7 +143,8 @@ public class ReservationService {
         return ReservationResponse.builder()
                 .id(res.getId())
                 .tenantId(res.getTenant().getId())
-                .tenantName(res.getTenant().getFullName())
+                .tenantName(res.getTenant().getFirstName())
+                .tenantSurname(res.getTenant().getLastName())
                 .propertyId(res.getProperty().getId())
                 .status(res.getStatus().name())
                 .startDate(res.getStartDate())
@@ -134,17 +156,25 @@ public class ReservationService {
         Reservation res = reservationRepository.findById(id)
                 .orElseThrow(NoPropertyException::new);
 
-        Property property = propertyRepository.findById(res.getProperty().getId())
-                .orElseThrow(NoPropertyException::new);
+        ApartmentDTO apartmentDto;
+        try {
+            apartmentDto = apartmentClient.getApartmentById(res.getProperty().getId());
+            System.out.println("Apartment DTO: " + apartmentDto);
+        } catch (FeignException.NotFound e) {
+            throw new NoPropertyException();
+        }
+        Property property = new Property(apartmentDto.getId(), apartmentDto.getPrice(), apartmentDto.getRentalType(),
+                apartmentDto.getOwnerId());
 
-        if (!property.getOwner().getId().equals(ownerId)) {
+        if (!property.getOwnerId().equals(ownerId)) {
             throw new OwnerException("You are not the owner of this property");
         }
 
         return ReservationResponse.builder()
                 .id(res.getId())
                 .tenantId(res.getTenant().getId())
-                .tenantName(res.getTenant().getFullName())
+                .tenantName(res.getTenant().getFirstName())
+                .tenantSurname(res.getTenant().getLastName())
                 .propertyId(res.getProperty().getId())
                 .status(res.getStatus().name())
                 .startDate(res.getStartDate())
@@ -157,7 +187,8 @@ public class ReservationService {
                 ReservationResponse.builder()
                         .id(res.getId())
                         .tenantId(res.getTenant().getId())
-                        .tenantName(res.getTenant().getFullName())
+                        .tenantName(res.getTenant().getFirstName())
+                        .tenantSurname(res.getTenant().getLastName())
                         .propertyId(res.getProperty().getId())
                         .status(res.getStatus().name())
                         .startDate(res.getStartDate())

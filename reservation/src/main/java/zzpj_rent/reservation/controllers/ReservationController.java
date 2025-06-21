@@ -19,6 +19,7 @@ import zzpj_rent.reservation.services.ReservationService;
 
 import java.util.List;
 
+@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/rent")
 @Tag(name = "Reservation API", description = "Endpoints for managing reservations")
