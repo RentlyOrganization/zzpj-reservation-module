@@ -16,6 +16,7 @@ import zzpj_rent.reservation.microservices.UserClient;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
+import zzpj_rent.reservation.repository.OpinionRepository;
 import zzpj_rent.reservation.repository.ReservationRepository;
 import zzpj_rent.reservation.services.ReservationService;
 
@@ -38,13 +39,15 @@ class ReservationServiceTest {
     private ReservationService reservationService;
     private ApartmentClient apartmentClient;
     private UserClient userClient;
+    private OpinionRepository opinionRepository;
 
     @BeforeEach
     void setup() {
         reservationRepository = mock(ReservationRepository.class);
         apartmentClient = mock(ApartmentClient.class);
         userClient = mock(UserClient.class);
-        reservationService = new ReservationService(reservationRepository,apartmentClient, userClient);
+        opinionRepository = mock(OpinionRepository.class);
+        reservationService = new ReservationService(reservationRepository, opinionRepository, apartmentClient, userClient);
     }
 
     @Test

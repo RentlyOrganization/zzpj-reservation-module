@@ -4,17 +4,17 @@ import feign.FeignException;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
-import zzpj_rent.reservation.dtos.request.ApartmentDTO;
-import zzpj_rent.reservation.dtos.request.ReservationRequest;
-import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
-import zzpj_rent.reservation.dtos.request.UserDTO;
+import zzpj_rent.reservation.dtos.request.*;
+import zzpj_rent.reservation.dtos.response.OpinionResponse;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.exceptions.*;
 import zzpj_rent.reservation.microservices.ApartmentClient;
 import zzpj_rent.reservation.microservices.UserClient;
+import zzpj_rent.reservation.model.Opinion;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
+import zzpj_rent.reservation.repository.OpinionRepository;
 import zzpj_rent.reservation.repository.ReservationRepository;
 
 import java.time.LocalDate;
@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ReservationService {
     private final ReservationRepository reservationRepository;
+    private final OpinionRepository opinionRepository;
     private final ApartmentClient apartmentClient;
     private final UserClient userClient;
 
@@ -260,6 +261,64 @@ public class ReservationService {
         reservationRepository.save(reservation);
         return "Reservation updated successfully";
 
+    }
+
+    public Opinion createOpinion(Long reservationId, Long userId, OpinionRequest request) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(NoReservationException::new);
+
+        if (reservation.getStatus() != Reservation.Status.FINISHED) {
+            throw new ReservationStatusException("Opinion can only be created for finished reservations");
+        }
+
+        if (request.getRating() < 0 || request.getRating() > 5) {
+            throw new InvalidRatingException();
+        }
+
+        User user;
+        User creator;
+        if (reservation.getTenant().getId().equals(userId)) {
+            // Dodajemy opinię właścicielowi mieszkania
+            creator = reservation.getTenant();
+            Long ownerId = reservation.getProperty().getOwnerId();
+            user = getTenant(ownerId);
+        } else {
+            // Dodajemy opinię najemcy
+            Long ownerId = reservation.getProperty().getOwnerId();
+            creator = getTenant(ownerId);
+            user = reservation.getTenant();
+        }
+
+        Opinion opinion = Opinion.builder()
+                .content(request.getContent())
+                .rating(request.getRating())
+                .user(user)
+                .creator(creator)
+                .build();
+
+        return opinionRepository.save(opinion);
+    }
+
+    public List<OpinionResponse> getAllOpinionsByUser(Long userId) {
+        return opinionRepository.findAllByUser_Id(userId).stream().map(o ->
+                OpinionResponse.builder()
+                        .id(o.getId())
+                        .content(o.getContent())
+                        .rating(o.getRating())
+                        .firstName(o.getUser().getFirstName())
+                        .lastName(o.getUser().getLastName())
+                        .build()).collect(Collectors.toList());
+    }
+
+    public String deleteOpinion(Long userId, Long opinionId) {
+        Opinion opinion = opinionRepository.findById(opinionId).orElseThrow(NoOpinionException::new);
+
+        if (!opinion.getCreator().getId().equals(userId)) {
+            throw new OwnerException("To nie jest twoja opinia!");
+        }
+
+        opinionRepository.delete(opinion);
+        return "Pomyślnie usunięto opinię";
     }
 
     private Property getProperty(Long id) {

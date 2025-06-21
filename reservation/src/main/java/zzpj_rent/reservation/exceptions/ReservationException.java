@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 public sealed class ReservationException extends RuntimeException permits InvalidDateRangeException,
     NoPropertyException, ReservationStatusException, NoReservationException, NoTenantException,
-    OwnerException, NotSpecifiedException {
+    OwnerException, NotSpecifiedException, InvalidRatingException, NoOpinionException {
     @Getter
     private final HttpStatus status;
     private final String message;

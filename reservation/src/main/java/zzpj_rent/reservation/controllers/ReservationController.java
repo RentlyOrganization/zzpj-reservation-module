@@ -9,11 +9,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import zzpj_rent.reservation.dtos.request.OpinionRequest;
 import zzpj_rent.reservation.dtos.request.ReservationRequest;
 import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
 import zzpj_rent.reservation.dtos.response.ErrorMessage;
+import zzpj_rent.reservation.dtos.response.OpinionResponse;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.dtos.response.SuccessMessage;
+import zzpj_rent.reservation.model.Opinion;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.services.ReservationService;
 
@@ -101,7 +104,7 @@ public class ReservationController {
                     content = @Content(schema = @Schema(implementation = SuccessMessage.class))),
             @ApiResponse(responseCode = "400", description = "Nie znaleziono rezerwacji",
                     content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
-            @ApiResponse(responseCode = "404", description = "Nie znaleziono rezerwacji",
+            @ApiResponse(responseCode = "404", description = "Nie można usunąć rezerwacji",
                     content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
     })
     @DeleteMapping("/delete/{id}/tenant/{tenantId}")
@@ -161,6 +164,52 @@ public class ReservationController {
             @Parameter(description = "Reservation ID") @PathVariable Long id,
             @Parameter(description = "Owner ID") @PathVariable Long ownerId) {
         return ResponseEntity.ok(reservationService.getReservationByIdForOwner(id, ownerId));
+    }
+
+    @Operation(summary = "Add an opinion to a reservation")
+    @PostMapping("/opinion/{reservationId}")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Pomyślnie dodano opinię",
+                    content = @Content(schema = @Schema(implementation = SuccessMessage.class))),
+            @ApiResponse(responseCode = "400", description = "Niepoprawne dane",
+                    content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
+            @ApiResponse(responseCode = "404", description = "Nie udało się dodać opini",
+                    content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    })
+    public ResponseEntity<Opinion> createOpinion(
+            @Parameter(description = "Reservation ID") @PathVariable Long reservationId,
+            @Parameter(description = "Creator ID") @RequestParam Long userId,
+            @Parameter(description = "Opinion content") @RequestBody OpinionRequest opinion) {
+        return ResponseEntity.ok(reservationService.createOpinion(reservationId, userId, opinion));
+    }
+
+    @Operation(summary = "Get all opinions for user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Pomyślnie wyszukano opinii",
+                    content = @Content(schema = @Schema(implementation = SuccessMessage.class))),
+            @ApiResponse(responseCode = "500", description = "Błąd serwera",
+                    content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    })
+    @GetMapping("/opinion/{userId}")
+    public ResponseEntity<List<OpinionResponse>> getAllOpinionsByUser(
+            @Parameter(description = "UserId") @PathVariable Long userId) {
+        return ResponseEntity.ok(reservationService.getAllOpinionsByUser(userId));
+    }
+
+    @Operation(summary = "Delete opinion")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Pomyślnie usunięto opinię",
+                    content = @Content(schema = @Schema(implementation = SuccessMessage.class))),
+            @ApiResponse(responseCode = "400", description = "Nie znaleziono opinii",
+                    content = @Content(schema = @Schema(implementation = ErrorMessage.class))),
+            @ApiResponse(responseCode = "404", description = "Nie można usunąć opinii",
+                    content = @Content(schema = @Schema(implementation = ErrorMessage.class)))
+    })
+    @DeleteMapping("/opinion/{opinionId}")
+    public ResponseEntity<SuccessMessage> deleteOpinion(
+            @Parameter(description = "Opinion ID") @PathVariable Long opinionId,
+            @Parameter(description = "User ID") @RequestParam Long userId) {
+        return ResponseEntity.ok(new SuccessMessage(reservationService.deleteOpinion(userId, opinionId)));
     }
 
 }
