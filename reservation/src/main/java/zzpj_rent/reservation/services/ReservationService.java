@@ -8,6 +8,7 @@ import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.exceptions.*;
 import zzpj_rent.reservation.microservices.ApartmentClient;
+import zzpj_rent.reservation.microservices.UserClient;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
@@ -29,6 +30,7 @@ public class ReservationService {
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
     private final ApartmentClient apartmentClient;
+    private final UserClient userClient;
 
     public Reservation createReservation(ReservationRequest request) {
         try {
@@ -78,7 +80,8 @@ public class ReservationService {
 
     //TODO NAPISAC TESTY DO TEGO
     public List<ReservationResponse> getAllReservationsForTenant(Long id) {
-        System.out.println(apartmentClient.getApartmentById(2L));
+        System.out.println(apartmentClient.getApartmentById(1L));
+        System.out.println(userClient.getUserById(1L));
         return reservationRepository.findByTenantId(id).stream().map(res ->
                 ReservationResponse.builder()
                         .id(res.getId())

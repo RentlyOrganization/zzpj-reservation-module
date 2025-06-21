@@ -9,6 +9,7 @@ import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.exceptions.*;
 import zzpj_rent.reservation.microservices.ApartmentClient;
+import zzpj_rent.reservation.microservices.UserClient;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
@@ -36,6 +37,7 @@ class ReservationServiceTest {
     private UserRepository userRepository;
     private ReservationService reservationService;
     private ApartmentClient apartmentClient;
+    private UserClient userClient;
 
     @BeforeEach
     void setup() {
@@ -43,7 +45,8 @@ class ReservationServiceTest {
         propertyRepository = mock(PropertyRepository.class);
         userRepository = mock(UserRepository.class);
         apartmentClient = mock(ApartmentClient.class);
-        reservationService = new ReservationService(reservationRepository, propertyRepository, userRepository, apartmentClient);
+        userClient = mock(UserClient.class);
+        reservationService = new ReservationService(reservationRepository, propertyRepository, userRepository, apartmentClient, userClient);
     }
 
     @Test
