@@ -321,7 +321,7 @@ public class ReservationService {
         return "Pomyślnie usunięto opinię";
     }
 
-    private Property getProperty(Long id) {
+    public Property getProperty(Long id) {
         ApartmentDTO apartmentDto;
         try {
             apartmentDto = apartmentClient.getApartmentById(id);
@@ -332,7 +332,7 @@ public class ReservationService {
                 apartmentDto.getOwnerId());
     }
 
-    private User getTenant(Long id) {
+    public User getTenant(Long id) {
         UserDTO userDto;
         try {
             userDto = userClient.getUserById(id);

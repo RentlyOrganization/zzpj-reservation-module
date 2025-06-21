@@ -5,14 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
-import zzpj_rent.reservation.dtos.request.ApartmentDTO;
-import zzpj_rent.reservation.dtos.request.ReservationRequest;
-import zzpj_rent.reservation.dtos.request.UpdateReservationRequest;
-import zzpj_rent.reservation.dtos.request.UserDTO;
+import zzpj_rent.reservation.dtos.request.*;
+import zzpj_rent.reservation.dtos.response.OpinionResponse;
 import zzpj_rent.reservation.dtos.response.ReservationResponse;
 import zzpj_rent.reservation.exceptions.*;
 import zzpj_rent.reservation.microservices.ApartmentClient;
 import zzpj_rent.reservation.microservices.UserClient;
+import zzpj_rent.reservation.model.Opinion;
 import zzpj_rent.reservation.model.Property;
 import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
@@ -244,7 +243,7 @@ class ReservationServiceTest {
 
         // then
         assertThat(result).hasSize(1);
-        ReservationResponse response = result.get(0);
+        ReservationResponse response = result.getFirst();
         assertThat(response.getId()).isEqualTo(123L);
         assertThat(response.getTenantId()).isEqualTo(10L);
         assertThat(response.getTenantName()).isEqualTo("Jan Kowalski");
@@ -415,7 +414,7 @@ class ReservationServiceTest {
         // then
         assertThat(responses).hasSize(2);
 
-        ReservationResponse response1 = responses.get(0);
+        ReservationResponse response1 = responses.getFirst();
         assertThat(response1.getId()).isEqualTo(1L);
         assertThat(response1.getTenantId()).isEqualTo(10L);
         assertThat(response1.getTenantName()).isEqualTo("Alice Smith");
@@ -825,6 +824,253 @@ class ReservationServiceTest {
                 .containsExactlyInAnyOrder("PENDING", "CONFIRMED");
 
         verify(reservationRepository).findByTenantId(tenantId);
+    }
+
+    @Test
+    void testCreateOpinionWithValidReservationAndTenant() {
+        // given
+        Long reservationId = 1L;
+        Long tenantId = 2L;
+        Long ownerId = 99L;
+
+        // przygotuj obiekt reservation
+        User tenantUser = new User();
+        tenantUser.setId(tenantId);
+
+        Property property = new Property(
+                1L,
+                BigDecimal.valueOf(1000.0),
+                "RENTAL_TYPE",
+                ownerId
+        );
+
+        Reservation reservation = new Reservation();
+        reservation.setId(reservationId);
+        reservation.setTenant(tenantUser);
+        reservation.setProperty(property);
+        reservation.setStatus(Reservation.Status.FINISHED);
+
+        // przygotuj UserDTO dla ownera (do userClient.getUserById(99L))
+        UserDTO ownerDTO = new UserDTO();
+        ownerDTO.setId(ownerId);
+        ownerDTO.setUsername("owner_user");
+        ownerDTO.setEmail("owner@example.com");
+        ownerDTO.setFirstName("OwnerFirst");
+        ownerDTO.setLastName("OwnerLast");
+
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(userClient.getUserById(ownerId)).thenReturn(ownerDTO); // <- ważne!
+        when(opinionRepository.save(any(Opinion.class)))
+                .thenAnswer(inv -> inv.getArgument(0)); // zwracaj opinię
+
+        // przygotuj request
+        OpinionRequest request = new OpinionRequest();
+        request.setContent("Świetny pobyt!");
+        request.setRating(5);
+
+        // when
+        Opinion opinion = reservationService.createOpinion(reservationId, tenantId, request);
+
+        // then
+        assertThat(opinion).isNotNull();
+        assertThat(opinion.getContent()).isEqualTo("Świetny pobyt!");
+        assertThat(opinion.getRating()).isEqualTo(5);
+        assertThat(opinion.getUser().getId()).isEqualTo(ownerId); // user to owner
+        assertThat(opinion.getCreator().getId()).isEqualTo(tenantId);
+    }
+
+    @Test
+    void shouldThrowReservationStatusExceptionWhenReservationNotFinished() {
+    Reservation reservation = new Reservation();
+    reservation.setStatus(Reservation.Status.PENDING);
+    when(reservationRepository.findById(anyLong())).thenReturn(Optional.of(reservation));
+
+    OpinionRequest request = new OpinionRequest();
+    request.setRating(4);
+
+    assertThatThrownBy(() -> reservationService.createOpinion(1L, 1L, request))
+            .isInstanceOf(ReservationStatusException.class)
+            .hasMessageContaining("Opinion can only be created for finished reservations");
+}
+
+    @Test
+    void shouldThrowInvalidRatingExceptionWhenRatingOutOfBounds() {
+        Reservation reservation = new Reservation();
+        reservation.setStatus(Reservation.Status.FINISHED);
+        when(reservationRepository.findById(anyLong())).thenReturn(Optional.of(reservation));
+        OpinionRequest request = new OpinionRequest();
+        request.setRating(6); // poza zakresem
+
+        assertThatThrownBy(() -> reservationService.createOpinion(1L, 1L, request))
+                .isInstanceOf(InvalidRatingException.class);
+    }
+
+    @Test
+    void shouldThrowNoReservationExceptionWhenReservationNotFound() {
+        when(reservationRepository.findById(anyLong())).thenReturn(Optional.empty());
+        OpinionRequest request = new OpinionRequest();
+
+        assertThatThrownBy(() -> reservationService.createOpinion(99L, 1L, request))
+                .isInstanceOf(NoReservationException.class);
+    }
+
+    @Test
+    void testGetProperty_ReturnsValidProperty() {
+        // given
+        Long id = 10L;
+        ApartmentDTO apartmentDTO = new ApartmentDTO();
+        apartmentDTO.setId(id);
+        apartmentDTO.setPrice(BigDecimal.valueOf(1234.56));
+        apartmentDTO.setRentalType("RENTAL_TYPE");
+        apartmentDTO.setOwnerId(99L);
+
+        when(apartmentClient.getApartmentById(id)).thenReturn(apartmentDTO);
+
+        // when
+        Property property = reservationService.getProperty(id);
+
+        // then
+        assertThat(property).isNotNull();
+        assertThat(property.getId()).isEqualTo(id);
+        assertThat(property.getPrice()).isEqualByComparingTo(BigDecimal.valueOf(1234.56));
+        assertThat(property.getRentalType()).isEqualTo("RENTAL_TYPE");
+        assertThat(property.getOwnerId()).isEqualTo(99L);
+    }
+
+    @Test
+    void testGetProperty_ThrowsNoPropertyException() {
+        // given
+        Long id = 123L;
+        when(apartmentClient.getApartmentById(id)).thenThrow(FeignException.NotFound.class);
+
+        // when + then
+        assertThatThrownBy(() -> reservationService.getProperty(id))
+                .isInstanceOf(NoPropertyException.class);
+    }
+
+    @Test
+    void testGetTenant_ReturnsValidUser() {
+        // given
+        Long userId = 99L;
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(userId);
+        userDTO.setUsername("user99");
+        userDTO.setEmail("user99@example.com");
+        userDTO.setFirstName("User");
+        userDTO.setLastName("NinetyNine");
+
+        when(userClient.getUserById(userId)).thenReturn(userDTO);
+
+        // when
+        User user = reservationService.getTenant(userId);
+
+        // then
+        assertThat(user).isNotNull();
+        assertThat(user.getId()).isEqualTo(userId);
+        assertThat(user.getUsername()).isEqualTo("user99");
+        assertThat(user.getEmail()).isEqualTo("user99@example.com");
+        assertThat(user.getFirstName()).isEqualTo("User");
+        assertThat(user.getLastName()).isEqualTo("NinetyNine");
+    }
+
+    @Test
+    void testGetTenant_ThrowsNoTenantException() {
+        // given
+        Long userId = 123L;
+        when(userClient.getUserById(userId)).thenThrow(FeignException.NotFound.class);
+
+        // when + then
+        assertThatThrownBy(() -> reservationService.getTenant(userId))
+                .isInstanceOf(NoTenantException.class);
+    }
+
+    @Test
+    void getAllOpinionsByUser_ShouldReturnMappedOpinionResponses() {
+        // given
+        User user = new User(1L, "john_doe", "john@example.com",
+                "John", "Doe");
+        Opinion opinion1 = Opinion.builder()
+                .id(100L)
+                .content("Super!")
+                .rating(5)
+                .user(user)
+                .build();
+        Opinion opinion2 = Opinion.builder()
+                .id(200L)
+                .content("Średnio...")
+                .rating(3)
+                .user(user)
+                .build();
+
+        when(opinionRepository.findAllByUser_Id(1L)).thenReturn(List.of(opinion1, opinion2));
+
+        // when
+        List<OpinionResponse> responses = reservationService.getAllOpinionsByUser(1L);
+
+        // then
+        assertThat(responses)
+                .hasSize(2)
+                .extracting(OpinionResponse::getId, OpinionResponse::getContent,
+                        OpinionResponse::getRating, OpinionResponse::getFirstName, OpinionResponse::getLastName)
+                .containsExactlyInAnyOrder(
+                        tuple(100L, "Super!", 5, "John", "Doe"),
+                        tuple(200L, "Średnio...", 3, "John", "Doe")
+                );
+
+        verify(opinionRepository).findAllByUser_Id(1L);
+    }
+
+    @Test
+    void deleteOpinion_ShouldDeleteWhenCreatorMatchesUserId() {
+        // given
+        User creator = new User(1L, "john_doe", "john@example.com",
+                "John", "Doe");
+        Opinion opinion = Opinion.builder()
+                .id(100L)
+                .creator(creator)
+                .build();
+
+        when(opinionRepository.findById(100L)).thenReturn(Optional.of(opinion));
+        doNothing().when(opinionRepository).delete(opinion);
+
+        // when
+        String result = reservationService.deleteOpinion(1L, 100L);
+
+        // then
+        assertThat(result).isEqualTo("Pomyślnie usunięto opinię");
+        verify(opinionRepository).delete(opinion);
+    }
+
+    @Test
+    void deleteOpinion_ShouldThrowOwnerExceptionWhenUserIsNotCreator() {
+        // given
+        User creator = new User(1L, "john_doe", "john@example.com",
+                "John", "Doe");
+        Opinion opinion = Opinion.builder()
+                .id(100L)
+                .creator(creator)
+                .build();
+
+        when(opinionRepository.findById(100L)).thenReturn(Optional.of(opinion));
+
+        // when + then
+        assertThatThrownBy(() -> reservationService.deleteOpinion(2L, 100L))
+                .isInstanceOf(OwnerException.class)
+                .hasMessageContaining("To nie jest twoja opinia!");
+
+        verify(opinionRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteOpinion_ShouldThrowNoOpinionExceptionWhenOpinionNotFound() {
+        // given
+        when(opinionRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // when + then
+        assertThatThrownBy(() -> reservationService.deleteOpinion(1L, 999L))
+                .isInstanceOf(NoOpinionException.class);
+
+        verify(opinionRepository, never()).delete(any());
     }
 }
 
