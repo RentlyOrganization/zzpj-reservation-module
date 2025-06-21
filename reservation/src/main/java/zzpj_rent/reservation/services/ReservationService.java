@@ -44,26 +44,8 @@ public class ReservationService {
                 throw new InvalidDateRangeException("Start date and end date cannot be the same");
             }
 
-            ApartmentDTO apartmentDto;
-            try {
-                apartmentDto = apartmentClient.getApartmentById(request.getPropertyId());
-                System.out.println("Apartment DTO: " + apartmentDto);
-            } catch (FeignException.NotFound e) {
-                throw new NoPropertyException();
-            }
-            Property property = new Property(apartmentDto.getId(), apartmentDto.getPrice(), apartmentDto.getRentalType(),
-                    apartmentDto.getOwnerId());
-
-            UserDTO userDto;
-            try {
-                userDto = userClient.getUserById(request.getTenantId());
-                System.out.println("User DTO: " + userDto);
-            } catch (FeignException.NotFound e) {
-                throw new NoTenantException();
-            }
-
-            User tenant = new User(userDto.getId(), userDto.getUsername(), userDto.getEmail(),
-                    userDto.getFirstName(), userDto.getLastName());
+            Property property = getProperty(request.getPropertyId());
+            User tenant = getTenant(request.getTenantId());
 
             boolean isAvailable = reservationRepository
                     .findByPropertyIdAndDateRangeOverlap(property.getId(), request.getStartDate(), request.getEndDate())
@@ -92,7 +74,6 @@ public class ReservationService {
         }
     }
 
-    //TODO NAPISAC TESTY DO TEGO
     public List<ReservationResponse> getAllReservationsForTenant(Long id) {
         return reservationRepository.findByTenantId(id).stream().map(res ->
                 ReservationResponse.builder()
@@ -108,15 +89,7 @@ public class ReservationService {
     }
 
     public List<ReservationResponse> getAllReservationsForOwner(Long propertyId, Long ownerId) {
-        ApartmentDTO apartmentDto;
-        try {
-            apartmentDto = apartmentClient.getApartmentById(propertyId);
-            System.out.println("Apartment DTO: " + apartmentDto);
-        } catch (FeignException.NotFound e) {
-            throw new NoPropertyException();
-        }
-        Property property = new Property(apartmentDto.getId(), apartmentDto.getPrice(), apartmentDto.getRentalType(),
-                apartmentDto.getOwnerId());
+        Property property = getProperty(propertyId);
 
         if (!property.getOwnerId().equals(ownerId)) {
             throw new OwnerException("You are not the owner of this property");
@@ -156,15 +129,7 @@ public class ReservationService {
         Reservation res = reservationRepository.findById(id)
                 .orElseThrow(NoPropertyException::new);
 
-        ApartmentDTO apartmentDto;
-        try {
-            apartmentDto = apartmentClient.getApartmentById(res.getProperty().getId());
-            System.out.println("Apartment DTO: " + apartmentDto);
-        } catch (FeignException.NotFound e) {
-            throw new NoPropertyException();
-        }
-        Property property = new Property(apartmentDto.getId(), apartmentDto.getPrice(), apartmentDto.getRentalType(),
-                apartmentDto.getOwnerId());
+        Property property = getProperty(res.getProperty().getId());
 
         if (!property.getOwnerId().equals(ownerId)) {
             throw new OwnerException("You are not the owner of this property");
@@ -295,6 +260,29 @@ public class ReservationService {
         reservationRepository.save(reservation);
         return "Reservation updated successfully";
 
+    }
+
+    private Property getProperty(Long id) {
+        ApartmentDTO apartmentDto;
+        try {
+            apartmentDto = apartmentClient.getApartmentById(id);
+        } catch (FeignException.NotFound _) {
+            throw new NoPropertyException();
+        }
+        return  new Property(apartmentDto.getId(), apartmentDto.getPrice(), apartmentDto.getRentalType(),
+                apartmentDto.getOwnerId());
+    }
+
+    private User getTenant(Long id) {
+        UserDTO userDto;
+        try {
+            userDto = userClient.getUserById(id);
+        } catch (FeignException.NotFound _) {
+            throw new NoTenantException();
+        }
+
+        return new User(userDto.getId(), userDto.getUsername(), userDto.getEmail(),
+                userDto.getFirstName(), userDto.getLastName());
     }
 
 }
