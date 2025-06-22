@@ -60,6 +60,8 @@ class ReservationServiceTest {
         ApartmentDTO property = new ApartmentDTO();
         property.setId(1L);
         property.setOwnerId(3L);
+        property.setRentalType("DAILY");
+        property.setPrice(BigDecimal.valueOf(100));
 
         UserDTO tenantDto = new UserDTO();
         tenantDto.setId(2L);
@@ -234,6 +236,8 @@ class ReservationServiceTest {
         reservation.setStatus(Reservation.Status.CONFIRMED); // załóżmy, że takie istnieje
         reservation.setStartDate(LocalDate.now());
         reservation.setEndDate(LocalDate.now().plusDays(7));
+        reservation.setPayment(Reservation.Payment.ONE_TIME);
+        reservation.setPrice(BigDecimal.valueOf(1000.0));
 
         given(apartmentClient.getApartmentById(propertyId)).willReturn(property);
         given(reservationRepository.findByPropertyId(propertyId)).willReturn(List.of(reservation));
@@ -306,6 +310,8 @@ class ReservationServiceTest {
         reservation.setStatus(Reservation.Status.CONFIRMED);
         reservation.setStartDate(LocalDate.of(2025, 8, 1));
         reservation.setEndDate(LocalDate.of(2025, 8, 5));
+        reservation.setPayment(Reservation.Payment.ONE_TIME);
+        reservation.setPrice(BigDecimal.valueOf(1000.0));
 
         given(reservationRepository.findById(reservationId)).willReturn(Optional.of(reservation));
         given(apartmentClient.getApartmentById(property.getId())).willReturn(property);
@@ -396,6 +402,8 @@ class ReservationServiceTest {
         reservation1.setStatus(Reservation.Status.PENDING);
         reservation1.setStartDate(LocalDate.now());
         reservation1.setEndDate(LocalDate.now().plusDays(1));
+        reservation1.setPayment(Reservation.Payment.ONE_TIME);
+        reservation1.setPrice(BigDecimal.valueOf(1000.0));
 
         Reservation reservation2 = new Reservation();
         reservation2.setId(2L);
@@ -404,6 +412,8 @@ class ReservationServiceTest {
         reservation2.setStatus(Reservation.Status.PENDING);
         reservation2.setStartDate(LocalDate.now().plusDays(10));
         reservation2.setEndDate(LocalDate.now().plusDays(12));
+        reservation2.setPayment(Reservation.Payment.ONE_TIME);
+        reservation2.setPrice(BigDecimal.valueOf(1000.0));
 
         given(reservationRepository.findByStatusAndTenantId(Reservation.Status.PENDING, tenantId))
                 .willReturn(List.of(reservation1, reservation2));
@@ -586,11 +596,18 @@ class ReservationServiceTest {
     void updateReservation_ShouldUpdateWhenValidPendingAndAvailable() {
         Reservation reservation = new Reservation();
         reservation.setId(1L);
-        reservation.setProperty(new Property());
+
+        Property property = new Property();
+        property.setId(10L);
+        property.setPrice(BigDecimal.valueOf(1660));
+
+        reservation.setProperty(property);
         reservation.setStatus(Reservation.Status.PENDING);
         reservation.setStartDate(LocalDate.now().plusDays(1));
         reservation.setEndDate(LocalDate.now().plusDays(2));
         reservation.getProperty().setId(10L);
+        reservation.setPayment(Reservation.Payment.ONE_TIME);
+        reservation.setPrice(BigDecimal.valueOf(1660));
 
         UpdateReservationRequest request = new UpdateReservationRequest();
         request.setStartDate(LocalDate.now().plusDays(3));
@@ -756,6 +773,8 @@ class ReservationServiceTest {
         reservation.setStatus(Reservation.Status.CONFIRMED);
         reservation.setStartDate(LocalDate.of(2025, 1, 10));
         reservation.setEndDate(LocalDate.of(2025, 1, 15));
+        reservation.setPayment(Reservation.Payment.ONE_TIME);
+        reservation.setPrice(BigDecimal.valueOf(1000.0));
 
         when(reservationRepository.findByTenantId(tenantId)).thenReturn(List.of(reservation));
 
@@ -802,6 +821,8 @@ class ReservationServiceTest {
         res1.setStatus(Reservation.Status.PENDING);
         res1.setStartDate(LocalDate.of(2025, 2, 1));
         res1.setEndDate(LocalDate.of(2025, 2, 5));
+        res1.setPayment(Reservation.Payment.ONE_TIME);
+        res1.setPrice(BigDecimal.valueOf(1000.0));
 
         Reservation res2 = new Reservation();
         res2.setId(2L);
@@ -810,6 +831,8 @@ class ReservationServiceTest {
         res2.setStatus(Reservation.Status.CONFIRMED);
         res2.setStartDate(LocalDate.of(2025, 3, 10));
         res2.setEndDate(LocalDate.of(2025, 3, 12));
+        res2.setPayment(Reservation.Payment.ONE_TIME);
+        res2.setPrice(BigDecimal.valueOf(1000.0));
 
         when(reservationRepository.findByTenantId(tenantId)).thenReturn(List.of(res1, res2));
 
