@@ -20,4 +20,7 @@ public class ApartmentDTO {
     private Double longitude;
     private Long ownerId;
     private String ownerName;
+    private BigDecimal averageRating;
+    private Integer ratingCount;
+    private Long viewCount;
 }

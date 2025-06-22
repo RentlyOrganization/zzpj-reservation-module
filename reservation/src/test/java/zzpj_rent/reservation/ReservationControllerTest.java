@@ -21,7 +21,9 @@ import zzpj_rent.reservation.model.Reservation;
 import zzpj_rent.reservation.model.User;
 import zzpj_rent.reservation.services.ReservationService;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -110,7 +112,9 @@ class ReservationControllerTest {
                 "Surname",
                 LocalDate.now(),
                 LocalDate.now().plusDays(2),
-                Reservation.Status.CONFIRMED.toString()
+                Reservation.Status.CONFIRMED.toString(),
+                Reservation.Payment.ONE_TIME.name(),
+                BigDecimal.valueOf(1000)
         );
 
         when(reservationService.getReservationByIdForTenant(reservationId, tenantId))
@@ -194,8 +198,10 @@ class ReservationControllerTest {
         Long ownerId = 200L;
 
         List<ReservationResponse> responses = List.of(
-                new ReservationResponse(1L, 200L, 100L, "Name", "Surname", LocalDate.now(), LocalDate.now().plusDays(2), Reservation.Status.CONFIRMED.toString()),
-                new ReservationResponse(2L, 201L, 100L, "Name", "Surname",  LocalDate.now().minusDays(5), LocalDate.now().minusDays(2), Reservation.Status.CANCELLED.toString())
+                new ReservationResponse(1L, 200L, 100L, "Name", "Surname", LocalDate.now(), LocalDate.now().plusDays(2), Reservation.Status.CONFIRMED.toString(), Reservation.Payment.ONE_TIME.name(),
+                        BigDecimal.valueOf(1000)),
+                new ReservationResponse(2L, 201L, 100L, "Name", "Surname",  LocalDate.now().minusDays(5), LocalDate.now().minusDays(2), Reservation.Status.CANCELLED.toString(), Reservation.Payment.ONE_TIME.name(),
+                        BigDecimal.valueOf(1000))
         );
 
         when(reservationService.getAllReservationsForOwner(propertyId, ownerId)).thenReturn(responses);
@@ -222,7 +228,9 @@ class ReservationControllerTest {
                 "Surname",
                 LocalDate.now(),
                 LocalDate.now().plusDays(2),
-                Reservation.Status.CONFIRMED.toString()
+                Reservation.Status.CONFIRMED.toString(),
+                Reservation.Payment.ONE_TIME.name(),
+                BigDecimal.valueOf(1000)
         );
 
         when(reservationService.getReservationByIdForOwner(reservationId, ownerId)).thenReturn(response);
@@ -263,7 +271,8 @@ class ReservationControllerTest {
                 request.getContent(),
                 request.getRating(),
                 user,
-                creator
+                creator,
+                LocalDateTime.now()
         );
 
         when(reservationService.createOpinion(reservationId, userId, request))

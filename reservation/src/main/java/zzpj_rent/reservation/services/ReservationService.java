@@ -17,10 +17,13 @@ import zzpj_rent.reservation.model.User;
 import zzpj_rent.reservation.repository.OpinionRepository;
 import zzpj_rent.reservation.repository.ReservationRepository;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 
 import java.time.LocalDateTime;
 import java.time.chrono.ChronoLocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -69,6 +72,18 @@ public class ReservationService {
                     .createdAt(LocalDateTime.now())
                     .build();
 
+            if (property.getRentalType().equals("DAILY")) {
+                reservation.setPayment(Reservation.Payment.ONE_TIME);
+                long days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
+                reservation.setPrice(
+                        property.getPrice().multiply(BigDecimal.valueOf(days).setScale(2, RoundingMode.HALF_UP))
+                );
+
+            } else {
+                reservation.setPayment(Reservation.Payment.MONTHLY);
+                reservation.setPrice(property.getPrice());
+            }
+
             return reservationRepository.save(reservation);
         } catch (DataAccessException | NullPointerException _) {
             throw new NotSpecifiedException("An error occurred while creating the reservation");
@@ -86,6 +101,8 @@ public class ReservationService {
                         .status(res.getStatus().name())
                         .startDate(res.getStartDate())
                         .endDate(res.getEndDate())
+                        .payment(res.getPayment().name())
+                        .price(res.getPrice())
                         .build()).collect(Collectors.toList());
     }
 
@@ -106,6 +123,8 @@ public class ReservationService {
                         .status(res.getStatus().name())
                         .startDate(res.getStartDate())
                         .endDate(res.getEndDate())
+                        .payment(res.getPayment().name())
+                        .price(res.getPrice())
                         .build()).collect(Collectors.toList());
 
     }
@@ -123,6 +142,8 @@ public class ReservationService {
                 .status(res.getStatus().name())
                 .startDate(res.getStartDate())
                 .endDate(res.getEndDate())
+                .payment(res.getPayment().name())
+                .price(res.getPrice())
                 .build();
     }
 
@@ -145,6 +166,8 @@ public class ReservationService {
                 .status(res.getStatus().name())
                 .startDate(res.getStartDate())
                 .endDate(res.getEndDate())
+                .payment(res.getPayment().name())
+                .price(res.getPrice())
                 .build();
     }
 
@@ -159,6 +182,8 @@ public class ReservationService {
                         .status(res.getStatus().name())
                         .startDate(res.getStartDate())
                         .endDate(res.getEndDate())
+                        .payment(res.getPayment().name())
+                        .price(res.getPrice())
                         .build()).collect(Collectors.toList());
     }
 
@@ -257,6 +282,13 @@ public class ReservationService {
 
         reservation.setStartDate(startDate);
         reservation.setEndDate(endDate);
+
+        if (reservation.getPayment().toString().equals("ONE_TIME")) {
+            long days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
+            reservation.setPrice(
+                    reservation.getProperty().getPrice().multiply(BigDecimal.valueOf(days).setScale(2, RoundingMode.HALF_UP))
+            );
+        }
 
         reservationRepository.save(reservation);
         return "Reservation updated successfully";

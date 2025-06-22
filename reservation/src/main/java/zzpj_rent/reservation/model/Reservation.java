@@ -3,6 +3,8 @@ package zzpj_rent.reservation.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -38,6 +40,17 @@ public class Reservation {
 
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Enumerated(EnumType.STRING)
+    private Payment payment;
+
+    private BigDecimal price;
+
+
+    public enum Payment {
+        MONTHLY,
+        ONE_TIME
+    }
 
     public enum Status {
         PENDING,

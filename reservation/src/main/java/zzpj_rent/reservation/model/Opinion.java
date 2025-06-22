@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "opinions")
 @Data
@@ -27,5 +29,6 @@ public class Opinion {
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
     private User user;
-
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 }
